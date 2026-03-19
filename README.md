@@ -2,7 +2,7 @@
 
 Daily shift scheduling app for **Haven**, a veterinary shelter in Italy.
 
-Built for Nick, the manager who every morning needs to:
+Built for the manager who every morning needs to:
 1. See who is available
 2. Build the daily schedule
 3. Send it to the staff via WhatsApp
