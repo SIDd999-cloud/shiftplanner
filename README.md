@@ -1,7 +1,7 @@
 # ShiftPlanner 🐾
 
 Daily shift scheduling app for Haven, a veterinary shelter.
-Built for Nick — the manager who builds the schedule every morning and sends it via WhatsApp.
+Built for the manager who builds the schedule every morning and sends it via WhatsApp.
 
 ## What it does
 - Build the daily schedule visually (Shift Leaders, Morning, Afternoon, Evening, Overnight)
