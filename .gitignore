@@ -16,3 +16,7 @@ node_modules/
 .next/
 .DS_Store
 .vercel
+backend/.git
+backend/node_modules
+backend/frontend/
+**/__pycache__/
