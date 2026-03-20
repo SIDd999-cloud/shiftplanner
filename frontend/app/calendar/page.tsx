@@ -38,6 +38,7 @@ const CAT_COLOR: Record<Category, string> = {
   morning: "bg-blue-400 border-blue-500",
   afternoon: "bg-emerald-400 border-emerald-500",
   evening: "bg-violet-400 border-violet-500",
+  overnight: "bg-slate-400 border-slate-500",
 }
 function assignColumns(entries: any[]) {
   const sorted = [...entries].sort((a, b) => timeToMin(a.start) - timeToMin(b.start))
