@@ -13,10 +13,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from solver.constraint_engine import ConstraintEngine
-from solver.scoring_engine import ScoringEngine
-from solver.solver import Solver
-from request_adapter import build_solver_inputs
 
 app = FastAPI(title="ShiftPlanner API")
 
