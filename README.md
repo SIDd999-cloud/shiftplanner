@@ -1,23 +1,71 @@
 # ShiftPlanner 🐾
 
-Daily shift scheduling app for **Haven**, a veterinary shelter in Italy.
+Workforce scheduling tool for care homes. Built with Next.js, FastAPI, and Claude AI.
 
-Built for the manager who every morning needs to:
-1. See who is available
-2. Build the daily schedule
-3. Send it to the staff via WhatsApp
+**Live:** https://shiftplanner-nine.vercel.app
 
-## What it does
+---
 
-- **Schedule builder** — fill in shift leaders and staff for each time slot (Early Morning, Morning, Afternoon, Evening, Overnight)
-- **AI Chat Assistant** — just describe who's available in natural language and the AI fills the schedule automatically
-- **WhatsApp export** — generates a formatted message ready to paste in the group chat
-- **People database** — manage volunteers and employees with skills, health notes, and availability
-- **Tasks database** — manage tasks with categories and required skills
-- **PDF export** — save the schedule as a PDF
-- **Calendar view** — see the schedule by day or week
+## Stack
 
-## Tech Stack
-- **Frontend** — Next.js, React, TypeScript, Tailwind CSS
-- **Backend** — Python, FastAPI
-- **AI** — Anthropic Claude API
+- **Frontend:** Next.js 16, TypeScript, Tailwind, Zustand
+- **Backend:** Python, FastAPI, CP-SAT solver (Google OR-Tools)
+- **AI:** Anthropic Claude API — natural language schedule builder
+
+---
+
+## Features
+
+- Schedule builder (Shift Leaders, Early Morning, Morning, Afternoon, Evening, Overnight)
+- AI Chat panel — describe who is available and Claude fills the schedule
+- People database with skills, health notes, vehicle, employment type
+- Tasks database
+- Calendar view
+- WhatsApp export
+- PDF export
+- Auth system (see below)
+- Generate Schedule button — calls CP-SAT solver automatically
+
+---
+
+## Auth System
+
+The auth system is **built but disabled in production** (no forced redirect).
+
+### How it works at full regime
+1. Each staff member logs in with their account
+2. They fill in their availability (time slots per date)
+3. The manager logs in, sees all staff, and clicks "Generate Schedule"
+4. The CP-SAT solver uses availability data to build an optimal schedule
+
+### Demo accounts
+| Email | Role | Password |
+|-------|------|----------|
+| nick@haven.com | Manager | haven123 |
+| ava@haven.com | Staff | haven123 |
+| sid@haven.com | Staff | haven123 |
+
+### Why it's disabled in production
+The current auth is demo-only (Zustand + localStorage). Full production auth would require:
+- **PostgreSQL** — persistent user and availability storage
+- **JWT or OAuth** — secure session management
+- **API protection** — backend routes authenticated per user
+
+---
+
+## Run locally
+```bash
+# Backend
+cd shiftplanner/backend/backend
+python3 -m uvicorn main:app --reload --port 8000
+
+# Frontend
+cd shiftplanner/frontend
+npm run dev
+```
+
+---
+
+## Solver
+
+The CP-SAT solver lives in `backend/` and is not modified by the frontend. It receives `people`, `tasks`, `date`, and `availabilities` and returns optimized `entries`.
