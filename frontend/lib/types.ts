@@ -88,8 +88,13 @@ export interface User {
   personId?: string  // collegato al Person nel database
 }
 
+export interface TimeSlot {
+  start: string  // "09:00"
+  end: string    // "12:00"
+}
+
 export interface Availability {
   userId: string
   date: string
-  categories: Category[]  // quali fasce è disponibile
+  slots: TimeSlot[]  // es. [{start:"09:00", end:"12:00"}, {start:"15:00", end:"17:00"}]
 }

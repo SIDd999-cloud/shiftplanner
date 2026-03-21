@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import type { User, Availability, Category } from "./types"
+import type { User, Availability, TimeSlot } from "./types"
 import { generateId } from "./types"
 
 interface AuthStore {
@@ -10,8 +10,8 @@ interface AuthStore {
   login: (email: string, password: string) => boolean
   logout: () => void
   registerUser: (email: string, name: string, role: "manager" | "staff", personId?: string) => User
-  setAvailability: (userId: string, date: string, categories: Category[]) => void
-  getAvailability: (userId: string, date: string) => Category[]
+  setAvailability: (userId: string, date: string, slots: TimeSlot[]) => void
+  getAvailability: (userId: string, date: string) => TimeSlot[]
 }
 
 // Demo users pre-caricati
