@@ -76,3 +76,20 @@ export function getSkillColor(skill: string): string {
   for (let i = 0; i < skill.length; i++) hash = skill.charCodeAt(i) + ((hash << 5) - hash)
   return colors[Math.abs(hash) % colors.length]
 }
+
+// ── Auth & Users ─────────────────────────────────────────────────────────────
+export type Role = "manager" | "staff"
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  role: Role
+  personId?: string  // collegato al Person nel database
+}
+
+export interface Availability {
+  userId: string
+  date: string
+  categories: Category[]  // quali fasce è disponibile
+}

@@ -3,6 +3,7 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type { Person, Task, ScheduleEntry, Category } from "./types"
 import { generateId } from "./types"
+import { useAuthStore } from "./auth-store"
 interface Store {
   people: Person[]
   tasks: Task[]
@@ -60,10 +61,10 @@ export const useStore = create<Store>()(
         if (people.length === 0 || tasks.length === 0) return "Add people and tasks first."
         set({ isSolving: true })
         try {
-          const res = await fetch("http://localhost:8000/api/solve", {
+          const res = await fetch("https://shiftplanner.onrender.com/api/solve", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ people, tasks, date }),
+            body: JSON.stringify({ people, tasks, date, availabilities: useAuthStore.getState().availability }),
           })
           if (!res.ok) return "Error: " + await res.text()
           const data = await res.json()

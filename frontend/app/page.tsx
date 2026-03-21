@@ -304,7 +304,7 @@ function AIChatPanel({ people, tasks, onApply }: AIChatPanelProps) {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SchedulePage() {
-  const { people, tasks } = useStore()
+  const { people, tasks, solveSchedule, isSolving } = useStore()
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)
   const [leaders, setLeaders] = useState<ShiftRow[]>([newRow()])
@@ -404,6 +404,10 @@ export default function SchedulePage() {
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
           </div>
+          <button onClick={() => solveSchedule(date)} disabled={isSolving}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            {isSolving ? <span className="animate-spin">⏳</span> : "✨"} Generate Schedule
+          </button>
           <button onClick={handleReset}
             className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 hover:bg-red-50">
             Reset
