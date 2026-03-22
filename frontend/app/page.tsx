@@ -315,6 +315,13 @@ export default function SchedulePage() {
   if (currentUser?.role === "staff") return null
   const date = scheduleDate
   const setDate = setScheduleDate
+  const safeSections = {
+    early_morning: sections?.early_morning ?? [newRow()],
+    morning: sections?.morning ?? [newRow()],
+    afternoon: sections?.afternoon ?? [newRow()],
+    evening: sections?.evening ?? [newRow()],
+    overnight: sections?.overnight ?? [newRow()],
+  }
   const [copied, setCopied] = useState(false)
   const [aiFlash, setAiFlash] = useState(false)
 
@@ -341,8 +348,8 @@ export default function SchedulePage() {
       setSections(prev => {
         const next = { ...prev }
         for (const cat of SECTIONS) {
-          if (data.sections[cat] !== undefined) {
-            const rows: any[] = data.sections[cat]
+          if (data.safeSections[cat] !== undefined) {
+            const rows: any[] = data.safeSections[cat]
             next[cat] = rows.length > 0 ? rows.map((r: any) => ({ ...newRow(), ...r })) : [newRow()]
           }
         }
@@ -376,7 +383,7 @@ export default function SchedulePage() {
     if (notes.other) text += notes.other + "\n"
     if (notes.onDuty || notes.offDuty || notes.parvoWard || notes.other) text += "\n"
     SECTIONS.forEach(cat => {
-      const valid = sections[cat].filter(r => r.personId || r.start)
+      const valid = safeSections[cat].filter(r => r.personId || r.start)
       if (valid.length === 0) return
       text += "*" + CATEGORY_LABELS[cat].toUpperCase() + "*\n"
       valid.forEach(r => {
@@ -451,7 +458,7 @@ export default function SchedulePage() {
                 {CATEGORY_LABELS[cat]}
               </span>
             </h2>
-            {sections[cat].map(row => (
+            {safeSections[cat].map(row => (
               <RowInput key={row.id} row={row} people={people} tasks={tasks}
                 onUpdate={(f, v) => updateRow(cat, row.id, f, v)}
                 onRemove={() => setSections(s => ({ ...s, [cat]: s[cat].filter(r => r.id !== row.id) }))}
