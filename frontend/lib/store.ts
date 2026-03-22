@@ -157,6 +157,7 @@ export const useStore = create<Store>()(
 
           // Convert entries to form rows
           const newSections = emptySections()
+          const newLeaders: ShiftRow[] = []
           for (const entry of data.entries) {
             const row: ShiftRow = {
               id: entry.id,
@@ -166,6 +167,7 @@ export const useStore = create<Store>()(
               taskId: entry.taskId,
               note: "",
             }
+            // Add to category section
             const cat = entry.category as Category
             if (newSections[cat]) {
               if (newSections[cat].length === 1 && !newSections[cat][0].personId) {
@@ -174,9 +176,16 @@ export const useStore = create<Store>()(
                 newSections[cat].push(row)
               }
             }
+            // Also add to leaders section if isLeader
+            if (entry.isLeader) {
+              newLeaders.push(row)
+            }
           }
 
-          set({ sections: newSections })
+          set({
+            leaders: newLeaders.length > 0 ? newLeaders : [newRow()],
+            sections: newSections,
+          })
 
           return null
         } catch (e) {
