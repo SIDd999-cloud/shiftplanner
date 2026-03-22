@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/auth-store"
 import { useStore } from "@/lib/store"
@@ -35,7 +35,10 @@ export default function ProfilePage() {
     setAvailability(currentUser!.id, selectedDate, updated)
   }
 
-  if (!currentUser) { router.push("/login"); return null }
+  useEffect(() => {
+    if (!currentUser) router.push("/login")
+  }, [currentUser, router])
+  if (!currentUser) return null
 
   const handleSave = () => {
     if (!currentUser.personId) return

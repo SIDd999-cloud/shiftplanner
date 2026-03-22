@@ -306,17 +306,15 @@ function AIChatPanel({ people, tasks, onApply }: AIChatPanelProps) {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SchedulePage() {
-  const { people, tasks, solveSchedule, isSolving } = useStore()
+  const { people, tasks, solveSchedule, isSolving, scheduleDate, setScheduleDate, leaders, setLeaders, notes, setNotes, sections, setSections } = useStore()
   const { currentUser } = useAuthStore()
   const router = useRouter()
-  if (currentUser?.role === "staff") { router.push("/profile"); return null }
-  const today = new Date().toISOString().slice(0, 10)
-  const [date, setDate] = useState(today)
-  const [leaders, setLeaders] = useState<ShiftRow[]>([newRow()])
-  const [notes, setNotes] = useState<DailyNotes>({ onDuty: "", offDuty: "", parvoWard: "", other: "" })
-  const [sections, setSections] = useState<Record<Category, ShiftRow[]>>({
-    early_morning: [newRow()], morning: [newRow()], afternoon: [newRow()], evening: [newRow()], overnight: [newRow()],
-  })
+  useEffect(() => {
+    if (currentUser?.role === "staff") router.push("/profile")
+  }, [currentUser, router])
+  if (currentUser?.role === "staff") return null
+  const date = scheduleDate
+  const setDate = setScheduleDate
   const [copied, setCopied] = useState(false)
   const [aiFlash, setAiFlash] = useState(false)
 
