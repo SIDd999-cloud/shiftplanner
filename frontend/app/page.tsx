@@ -4,6 +4,8 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { useStore } from "@/lib/store"
+import { useAuthStore } from "@/lib/auth-store"
+import { useRouter } from "next/navigation"
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/types"
 import type { Category } from "@/lib/types"
 
@@ -305,6 +307,9 @@ function AIChatPanel({ people, tasks, onApply }: AIChatPanelProps) {
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const { people, tasks, solveSchedule, isSolving } = useStore()
+  const { currentUser } = useAuthStore()
+  const router = useRouter()
+  if (currentUser?.role === "staff") { router.push("/profile"); return null }
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(today)
   const [leaders, setLeaders] = useState<ShiftRow[]>([newRow()])
