@@ -3,7 +3,8 @@
 
 "use client"
 import { useState, useRef, useEffect } from "react"
-import { useStore } from "@/lib/store"
+import { useStore, newRow } from "@/lib/store"
+import type { ShiftRow, DailyNotes } from "@/lib/store"
 import { useAuthStore } from "@/lib/auth-store"
 import { useRouter } from "next/navigation"
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/types"
@@ -19,29 +20,9 @@ const TIME_SLOTS = [
   "20:00","20:30","21:00","21:30","22:00","22:30","23:00","23:30","00:00"
 ]
 
-interface ShiftRow {
-  id: string
-  start: string
-  end: string
-  personId: string
-  taskId: string
-  note: string
-}
-
-interface DailyNotes {
-  onDuty: string
-  offDuty: string
-  parvoWard: string
-  other: string
-}
-
 interface ChatMessage {
   role: "user" | "assistant"
   content: string
-}
-
-function newRow(): ShiftRow {
-  return { id: Math.random().toString(36).slice(2), start: "", end: "", personId: "", taskId: "", note: "" }
 }
 
 // ── Time Picker ─────────────────────────────────────────────────────────────
@@ -306,17 +287,12 @@ function AIChatPanel({ people, tasks, onApply }: AIChatPanelProps) {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SchedulePage() {
-  const { people, tasks, solveSchedule, isSolving } = useStore()
+  const { people, tasks, solveSchedule, isSolving, scheduleDate, setScheduleDate, leaders, setLeaders, notes, setNotes, sections, setSections, resetForm } = useStore()
   const { currentUser } = useAuthStore()
   const router = useRouter()
   if (currentUser?.role === "staff") { router.push("/profile"); return null }
-  const today = new Date().toISOString().slice(0, 10)
-  const [date, setDate] = useState(today)
-  const [leaders, setLeaders] = useState<ShiftRow[]>([newRow()])
-  const [notes, setNotes] = useState<DailyNotes>({ onDuty: "", offDuty: "", parvoWard: "", other: "" })
-  const [sections, setSections] = useState<Record<Category, ShiftRow[]>>({
-    early_morning: [newRow()], morning: [newRow()], afternoon: [newRow()], evening: [newRow()], overnight: [newRow()],
-  })
+  const date = scheduleDate
+  const setDate = setScheduleDate
   const [copied, setCopied] = useState(false)
   const [aiFlash, setAiFlash] = useState(false)
 
@@ -330,9 +306,7 @@ export default function SchedulePage() {
     setSections(s => ({ ...s, [cat]: s[cat].map(r => r.id === id ? { ...r, [field]: value } : r) }))
   }
   function handleReset() {
-    setLeaders([newRow()])
-    setNotes({ onDuty: "", offDuty: "", parvoWard: "", other: "" })
-    setSections({ early_morning: [newRow()], morning: [newRow()], afternoon: [newRow()], evening: [newRow()], overnight: [newRow()] })
+    resetForm()
   }
 
   function handleApplySchedule(data: any) {
