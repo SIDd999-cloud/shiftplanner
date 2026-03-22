@@ -315,7 +315,7 @@ export default function SchedulePage() {
   if (currentUser?.role === "staff") return null
   const date = scheduleDate
   const setDate = setScheduleDate
-  const safeNotes = notes ?? { onDuty: "", offDuty: "", parvoWard: "", other: "" }
+  const safeNotes = { onDuty: "", offDuty: "", parvoWard: "", other: "", ...(notes ?? {}) }
   const safeSections = {
     early_morning: sections?.early_morning ?? [newRow()],
     morning: sections?.morning ?? [newRow()],
