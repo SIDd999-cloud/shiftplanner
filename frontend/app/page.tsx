@@ -315,6 +315,7 @@ export default function SchedulePage() {
   if (currentUser?.role === "staff") return null
   const date = scheduleDate
   const setDate = setScheduleDate
+  const safeNotes = notes ?? { onDuty: "", offDuty: "", parvoWard: "", other: "" }
   const safeSections = {
     early_morning: sections?.early_morning ?? [newRow()],
     morning: sections?.morning ?? [newRow()],
@@ -444,7 +445,7 @@ export default function SchedulePage() {
                 <span className="text-sm text-slate-500 w-24 flex-shrink-0">
                   {key === "onDuty" ? "On duty:" : key === "offDuty" ? "Off duty:" : key === "parvoWard" ? "Parvo ward:" : "Other:"}
                 </span>
-                <input value={notes[key]} onChange={e => setNotes(n => ({ ...n, [key]: e.target.value }))}
+                <input value={safeNotes[key]} onChange={e => setNotes({ ...safeNotes, [key]: e.target.value })}
                   className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
               </div>
             ))}
