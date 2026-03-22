@@ -4,35 +4,11 @@ import { persist } from "zustand/middleware"
 import type { Person, Task, ScheduleEntry, Category } from "./types"
 import { generateId } from "./types"
 import { useAuthStore } from "./auth-store"
-interface ShiftRow {
-  id: string
-  start: string
-  end: string
-  personId: string
-  taskId: string
-  note: string
-}
-
-interface DailyNotes {
-  onDuty: string
-  offDuty: string
-  parvoWard: string
-  other: string
-}
-
 interface Store {
   people: Person[]
   tasks: Task[]
   entries: ScheduleEntry[]
   isSolving: boolean
-  scheduleDate: string
-  leaders: ShiftRow[]
-  notes: DailyNotes
-  sections: Record<string, ShiftRow[]>
-  setScheduleDate: (date: string) => void
-  setLeaders: (leaders: ShiftRow[]) => void
-  setNotes: (notes: DailyNotes) => void
-  setSections: (sections: Record<string, ShiftRow[]>) => void
   addPerson: (person: Omit<Person, "id">) => void
   updatePerson: (person: Person) => void
   removePerson: (id: string) => void
@@ -55,20 +31,6 @@ export const useStore = create<Store>()(
       tasks: [],
       entries: [],
       isSolving: false,
-      scheduleDate: new Date().toISOString().slice(0, 10),
-      leaders: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-      notes: { onDuty: "", offDuty: "", parvoWard: "", other: "" },
-      sections: {
-        early_morning: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-        morning: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-        afternoon: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-        evening: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-        overnight: [{ id: Math.random().toString(36).substring(2,9), start: "", end: "", personId: "", taskId: "", note: "" }],
-      },
-      setScheduleDate: (date) => set({ scheduleDate: date }),
-      setLeaders: (leaders) => set({ leaders }),
-      setNotes: (notes) => set({ notes }),
-      setSections: (sections) => set({ sections }),
       addPerson: (personData) =>
         set((s) => ({ people: [...s.people, { id: generateId(), ...personData }] })),
       updatePerson: (person) =>

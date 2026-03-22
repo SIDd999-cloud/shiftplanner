@@ -306,23 +306,17 @@ function AIChatPanel({ people, tasks, onApply }: AIChatPanelProps) {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function SchedulePage() {
-  const { people, tasks, solveSchedule, isSolving, scheduleDate, setScheduleDate, leaders, setLeaders, notes, setNotes, sections, setSections } = useStore()
+  const { people, tasks, solveSchedule, isSolving } = useStore()
   const { currentUser } = useAuthStore()
   const router = useRouter()
-  useEffect(() => {
-    if (currentUser?.role === "staff") router.push("/profile")
-  }, [currentUser, router])
-  if (currentUser?.role === "staff") return null
-  const date = scheduleDate
-  const setDate = setScheduleDate
-  const safeNotes = { onDuty: "", offDuty: "", parvoWard: "", other: "", ...(notes ?? {}) }
-  const safeSections = {
-    early_morning: sections?.early_morning ?? [newRow()],
-    morning: sections?.morning ?? [newRow()],
-    afternoon: sections?.afternoon ?? [newRow()],
-    evening: sections?.evening ?? [newRow()],
-    overnight: sections?.overnight ?? [newRow()],
-  }
+  if (currentUser?.role === "staff") { router.push("/profile"); return null }
+  const today = new Date().toISOString().slice(0, 10)
+  const [date, setDate] = useState(today)
+  const [leaders, setLeaders] = useState<ShiftRow[]>([newRow()])
+  const [notes, setNotes] = useState<DailyNotes>({ onDuty: "", offDuty: "", parvoWard: "", other: "" })
+  const [sections, setSections] = useState<Record<Category, ShiftRow[]>>({
+    early_morning: [newRow()], morning: [newRow()], afternoon: [newRow()], evening: [newRow()], overnight: [newRow()],
+  })
   const [copied, setCopied] = useState(false)
   const [aiFlash, setAiFlash] = useState(false)
 
@@ -349,8 +343,8 @@ export default function SchedulePage() {
       setSections(prev => {
         const next = { ...prev }
         for (const cat of SECTIONS) {
-          if (data.safeSections[cat] !== undefined) {
-            const rows: any[] = data.safeSections[cat]
+          if (data.sections[cat] !== undefined) {
+            const rows: any[] = data.sections[cat]
             next[cat] = rows.length > 0 ? rows.map((r: any) => ({ ...newRow(), ...r })) : [newRow()]
           }
         }
@@ -384,7 +378,7 @@ export default function SchedulePage() {
     if (notes.other) text += notes.other + "\n"
     if (notes.onDuty || notes.offDuty || notes.parvoWard || notes.other) text += "\n"
     SECTIONS.forEach(cat => {
-      const valid = safeSections[cat].filter(r => r.personId || r.start)
+      const valid = sections[cat].filter(r => r.personId || r.start)
       if (valid.length === 0) return
       text += "*" + CATEGORY_LABELS[cat].toUpperCase() + "*\n"
       valid.forEach(r => {
@@ -415,33 +409,7 @@ export default function SchedulePage() {
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
           </div>
-          <button onClick={async () => {
-            const err = await solveSchedule(date)
-            if (!err) {
-              const { entries } = useStore.getState()
-              const newSections: Record<string, any[]> = {
-                early_morning: [], morning: [], afternoon: [], evening: [], overnight: []
-              }
-              for (const entry of entries.filter(e => e.date === date)) {
-                const person = people.find(p => p.id === entry.personId)
-                const task = tasks.find(t => t.id === entry.taskId)
-                if (!person || !task) continue
-                const row = { ...newRow(), start: entry.start, end: entry.end, personId: entry.personId, taskId: entry.taskId }
-                if (entry.isLeader) {
-                  setLeaders(l => [...l.filter(r => r.personId), row])
-                } else {
-                  newSections[entry.category] = [...(newSections[entry.category] || []), row]
-                }
-              }
-              setSections(s => ({
-                early_morning: newSections.early_morning.length ? newSections.early_morning : [newRow()],
-                morning: newSections.morning.length ? newSections.morning : [newRow()],
-                afternoon: newSections.afternoon.length ? newSections.afternoon : [newRow()],
-                evening: newSections.evening.length ? newSections.evening : [newRow()],
-                overnight: newSections.overnight.length ? newSections.overnight : [newRow()],
-              }))
-            }
-          }} disabled={isSolving}
+          <button onClick={() => solveSchedule(date)} disabled={isSolving}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2">
             {isSolving ? <span className="animate-spin">⏳</span> : "✨"} Generate Schedule
           </button>
@@ -471,7 +439,7 @@ export default function SchedulePage() {
                 <span className="text-sm text-slate-500 w-24 flex-shrink-0">
                   {key === "onDuty" ? "On duty:" : key === "offDuty" ? "Off duty:" : key === "parvoWard" ? "Parvo ward:" : "Other:"}
                 </span>
-                <input value={safeNotes[key]} onChange={e => setNotes({ ...safeNotes, [key]: e.target.value })}
+                <input value={notes[key]} onChange={e => setNotes(n => ({ ...n, [key]: e.target.value }))}
                   className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
               </div>
             ))}
@@ -485,7 +453,7 @@ export default function SchedulePage() {
                 {CATEGORY_LABELS[cat]}
               </span>
             </h2>
-            {safeSections[cat].map(row => (
+            {sections[cat].map(row => (
               <RowInput key={row.id} row={row} people={people} tasks={tasks}
                 onUpdate={(f, v) => updateRow(cat, row.id, f, v)}
                 onRemove={() => setSections(s => ({ ...s, [cat]: s[cat].filter(r => r.id !== row.id) }))}
