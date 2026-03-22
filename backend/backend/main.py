@@ -237,6 +237,7 @@ class SolveRequest(BaseModel):
     people: list[SolvePerson]
     tasks: list[SolveTask]
     date: str
+    availabilities: list[dict] = []
 
 class SolveEntry(BaseModel):
     id: str
@@ -267,41 +268,161 @@ def new_id():
 
 @app.post("/api/solve", response_model=SolveResponse)
 def solve(req: SolveRequest):
+    from ortools.sat.python import cp_model
+
+    people = req.people
+    tasks = req.tasks
+    date = req.date
+
+    # --- Availability: parse time slots from req.availabilities ---
+    # availabilities: list of {userId, personId, date, slots: [{start, end}]}
+    avail_slots: dict[str, list[tuple[int,int]]] = {}  # personId -> list of (start_min, end_min)
+    raw_avails = getattr(req, "availabilities", None) or []
+    for av in raw_avails:
+        av_date = av.get("date", "") if isinstance(av, dict) else getattr(av, "date", "")
+        if av_date != date:
+            continue
+        person_id = av.get("personId", "") if isinstance(av, dict) else getattr(av, "personId", "")
+        slots = av.get("slots", []) if isinstance(av, dict) else getattr(av, "slots", [])
+        parsed = []
+        for s in slots:
+            s_start = s.get("start","00:00") if isinstance(s, dict) else s.start
+            s_end = s.get("end","23:59") if isinstance(s, dict) else s.end
+            sh, sm = map(int, s_start.split(":"))
+            eh, em = map(int, s_end.split(":"))
+            parsed.append((sh*60+sm, eh*60+em))
+        if person_id:
+            avail_slots[person_id] = parsed
+
+    def is_available(person_id: str, cat: str) -> bool:
+        # If no availability data for this person, assume available
+        if person_id not in avail_slots:
+            return True
+        slots = avail_slots[person_id]
+        if not slots:
+            return True
+        cat_start_str, cat_end_str = CATEGORY_TIMES.get(cat, ("09:00","17:00"))
+        sh, sm = map(int, cat_start_str.split(":"))
+        eh, em = map(int, cat_end_str.split(":"))
+        cat_start = sh*60+sm
+        cat_end = eh*60+em
+        # Check if any slot covers this category
+        for (s, e) in slots:
+            if s <= cat_start and e >= cat_end:
+                return True
+        return False
+
+    # --- Build CP-SAT model ---
+    model = cp_model.CpModel()
+
+    # x[p][t] = 1 if person p is assigned to task t
+    x = {}
+    for p in people:
+        for t in tasks:
+            x[(p.id, t.id)] = model.new_bool_var(f"x_{p.id}_{t.id}")
+
+    # Constraint 1: each task assigned to exactly 1 person
+    for t in tasks:
+        model.add(sum(x[(p.id, t.id)] for p in people) == 1)
+
+    # Constraint 2: skill match — if task requires skill, only skilled people
+    for t in tasks:
+        if t.requiredSkill:
+            for p in people:
+                if t.requiredSkill not in p.skills:
+                    model.add(x[(p.id, t.id)] == 0)
+
+    # Constraint 3: availability — only assign if person is available for that category
+    for t in tasks:
+        for p in people:
+            if not is_available(p.id, t.category):
+                model.add(x[(p.id, t.id)] == 0)
+
+    # Constraint 4: max shifts per day
+    for p in people:
+        model.add(sum(x[(p.id, t.id)] for t in tasks) <= p.maxShiftsPerDay)
+
+    # Constraint 5: one task per category per person
+    from collections import defaultdict
+    tasks_by_cat = defaultdict(list)
+    for t in tasks:
+        tasks_by_cat[t.category].append(t)
+
+    for p in people:
+        for cat, cat_tasks in tasks_by_cat.items():
+            model.add(sum(x[(p.id, t.id)] for t in cat_tasks) <= 1)
+
+    # Objective: maximize assignments + balance workload (minimize max shifts)
+    total_assigned = sum(x[(p.id, t.id)] for p in people for t in tasks)
+    
+    # Balance: minimize variance by minimizing sum of squares (approximate with max)
+    shifts_per_person = [sum(x[(p.id, t.id)] for t in tasks) for p in people]
+    max_shifts = model.new_int_var(0, len(tasks), "max_shifts")
+    for sp in shifts_per_person:
+        model.add(sp <= max_shifts)
+
+    # Maximize assignments, secondarily minimize max_shifts
+    model.maximize(total_assigned * 100 - max_shifts)
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 10.0
+    status = solver.solve(model)
+
     entries = []
-    shifts_count = {p.id: 0 for p in req.people}
     leader_assigned = set()
-    tasks_by_cat = {}
-    for task in req.tasks:
-        tasks_by_cat.setdefault(task.category, []).append(task)
-    for category, cat_tasks in tasks_by_cat.items():
-        start, end = CATEGORY_TIMES.get(category, ("09:00", "17:00"))
-        for task in cat_tasks:
+
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        for t in tasks:
+            for p in people:
+                if solver.value(x[(p.id, t.id)]) == 1:
+                    start, end = CATEGORY_TIMES.get(t.category, ("09:00","17:00"))
+                    is_leader = t.category not in leader_assigned
+                    if is_leader:
+                        leader_assigned.add(t.category)
+                    entries.append(SolveEntry(
+                        id=new_id(),
+                        personId=p.id,
+                        taskId=t.id,
+                        date=date,
+                        start=start,
+                        end=end,
+                        category=t.category,
+                        isLeader=is_leader,
+                        isOvernight=(t.category == "overnight"),
+                    ))
+    else:
+        # Fallback: greedy if CP-SAT finds nothing
+        shifts_count = {p.id: 0 for p in people}
+        for t in tasks:
             eligible = [
-                p for p in req.people
+                p for p in people
                 if shifts_count[p.id] < p.maxShiftsPerDay
-                and (not task.requiredSkill or task.requiredSkill in p.skills)
+                and (not t.requiredSkill or t.requiredSkill in p.skills)
+                and is_available(p.id, t.category)
             ]
             if not eligible:
-                eligible = [p for p in req.people if not task.requiredSkill or task.requiredSkill in p.skills]
+                eligible = [p for p in people if not t.requiredSkill or t.requiredSkill in p.skills]
             if not eligible:
                 continue
             eligible.sort(key=lambda p: shifts_count[p.id])
             person = eligible[0]
-            is_leader = category not in leader_assigned
+            is_leader = t.category not in leader_assigned
             if is_leader:
-                leader_assigned.add(category)
+                leader_assigned.add(t.category)
+            start, end = CATEGORY_TIMES.get(t.category, ("09:00","17:00"))
             entries.append(SolveEntry(
                 id=new_id(),
                 personId=person.id,
-                taskId=task.id,
-                date=req.date,
+                taskId=t.id,
+                date=date,
                 start=start,
                 end=end,
-                category=category,
+                category=t.category,
                 isLeader=is_leader,
-                isOvernight=(category == "overnight"),
+                isOvernight=(t.category == "overnight"),
             ))
             shifts_count[person.id] += 1
+
     return SolveResponse(entries=entries)
 
 
