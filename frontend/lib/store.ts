@@ -139,7 +139,7 @@ export const useStore = create<Store>()(
         if (people.length === 0 || tasks.length === 0) return "Add people and tasks first."
         set({ isSolving: true })
         try {
-          const res = await fetch("https://shiftplanner.onrender.com/api/solve", {
+          const res = await fetch("http://localhost:8000/api/solve", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

@@ -231,7 +231,7 @@ class SolveTask(BaseModel):
     id: str
     name: str
     requiredSkill: str = ""
-    category: str = "morning"
+    category: str = ""
 
 class SolveRequest(BaseModel):
     people: list[SolvePerson]
@@ -271,8 +271,23 @@ def solve(req: SolveRequest):
     from ortools.sat.python import cp_model
 
     people = req.people
-    tasks = req.tasks
     date = req.date
+
+    # Pre-process tasks: assign category to "any shift" tasks
+    ALL_CATS = ["early_morning", "morning", "afternoon", "evening", "overnight"]
+    cat_counts = {c: 0 for c in ALL_CATS}
+    for t in req.tasks:
+        if t.category in ALL_CATS:
+            cat_counts[t.category] += 1
+
+    tasks = []
+    for t in req.tasks:
+        if not t.category or t.category not in ALL_CATS:
+            least_cat = min(cat_counts, key=lambda c: cat_counts[c])
+            cat_counts[least_cat] += 1
+            tasks.append(SolveTask(id=t.id, name=t.name, requiredSkill=t.requiredSkill, category=least_cat))
+        else:
+            tasks.append(t)
 
     # --- Availability: parse time slots from req.availabilities ---
     # availabilities: list of {userId, personId, date, slots: [{start, end}]}
@@ -312,6 +327,22 @@ def solve(req: SolveRequest):
                 return True
         return False
 
+    # --- Pre-process tasks: assign category to "any shift" tasks ---
+    ALL_CATS = ["early_morning", "morning", "afternoon", "evening", "overnight"]
+    cat_counts = {c: 0 for c in ALL_CATS}
+    for t in tasks:
+        if t.category in ALL_CATS:
+            cat_counts[t.category] += 1
+    processed = []
+    for t in tasks:
+        if not t.category or t.category not in ALL_CATS:
+            least_cat = min(cat_counts, key=lambda c: cat_counts[c])
+            cat_counts[least_cat] += 1
+            processed.append(SolveTask(id=t.id, name=t.name, requiredSkill=t.requiredSkill, category=least_cat))
+        else:
+            processed.append(t)
+    tasks = processed
+
     # --- Build CP-SAT model ---
     model = cp_model.CpModel()
 
@@ -344,6 +375,22 @@ def solve(req: SolveRequest):
 
     # Constraint 5: one task per category per person
     from collections import defaultdict
+    ALL_CATS = ["early_morning", "morning", "afternoon", "evening", "overnight"]
+    cat_counts = {c: 0 for c in ALL_CATS}
+    for t in tasks:
+        if t.category in ALL_CATS:
+            cat_counts[t.category] += 1
+
+    processed_tasks = []
+    for t in tasks:
+        if not t.category or t.category not in ALL_CATS:
+            least_cat = min(cat_counts, key=lambda c: cat_counts[c])
+            cat_counts[least_cat] += 1
+            processed_tasks.append(SolveTask(id=t.id, name=t.name, requiredSkill=t.requiredSkill, category=least_cat))
+        else:
+            processed_tasks.append(t)
+    tasks = processed_tasks
+
     tasks_by_cat = defaultdict(list)
     for t in tasks:
         tasks_by_cat[t.category].append(t)
