@@ -157,8 +157,6 @@ export const useStore = create<Store>()(
 
           // Convert entries to form rows
           const newSections = emptySections()
-          const newLeaders: ShiftRow[] = []
-
           for (const entry of data.entries) {
             const row: ShiftRow = {
               id: entry.id,
@@ -168,25 +166,17 @@ export const useStore = create<Store>()(
               taskId: entry.taskId,
               note: "",
             }
-            if (entry.isLeader) {
-              newLeaders.push(row)
-            } else {
-              const cat = entry.category as Category
-              if (newSections[cat]) {
-                // Replace the empty placeholder row
-                if (newSections[cat].length === 1 && !newSections[cat][0].personId) {
-                  newSections[cat] = [row]
-                } else {
-                  newSections[cat].push(row)
-                }
+            const cat = entry.category as Category
+            if (newSections[cat]) {
+              if (newSections[cat].length === 1 && !newSections[cat][0].personId) {
+                newSections[cat] = [row]
+              } else {
+                newSections[cat].push(row)
               }
             }
           }
 
-          set({
-            leaders: newLeaders.length > 0 ? newLeaders : [newRow()],
-            sections: newSections,
-          })
+          set({ sections: newSections })
 
           return null
         } catch (e) {
