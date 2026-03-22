@@ -415,7 +415,33 @@ export default function SchedulePage() {
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
           </div>
-          <button onClick={() => solveSchedule(date)} disabled={isSolving}
+          <button onClick={async () => {
+            const err = await solveSchedule(date)
+            if (!err) {
+              const { entries } = useStore.getState()
+              const newSections: Record<string, any[]> = {
+                early_morning: [], morning: [], afternoon: [], evening: [], overnight: []
+              }
+              for (const entry of entries.filter(e => e.date === date)) {
+                const person = people.find(p => p.id === entry.personId)
+                const task = tasks.find(t => t.id === entry.taskId)
+                if (!person || !task) continue
+                const row = { ...newRow(), start: entry.start, end: entry.end, personId: entry.personId, taskId: entry.taskId }
+                if (entry.isLeader) {
+                  setLeaders(l => [...l.filter(r => r.personId), row])
+                } else {
+                  newSections[entry.category] = [...(newSections[entry.category] || []), row]
+                }
+              }
+              setSections(s => ({
+                early_morning: newSections.early_morning.length ? newSections.early_morning : [newRow()],
+                morning: newSections.morning.length ? newSections.morning : [newRow()],
+                afternoon: newSections.afternoon.length ? newSections.afternoon : [newRow()],
+                evening: newSections.evening.length ? newSections.evening : [newRow()],
+                overnight: newSections.overnight.length ? newSections.overnight : [newRow()],
+              }))
+            }
+          }} disabled={isSolving}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2">
             {isSolving ? <span className="animate-spin">⏳</span> : "✨"} Generate Schedule
           </button>
